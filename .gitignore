@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local scratch: prompts and generated output never belong in the repo
+prompt*.txt
+fix.txt
+output/
+*.png
+
+# Model weights (large binaries; fetch per SETUP-comfyui.md)
+*.safetensors
+*.ckpt
+*.pt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
