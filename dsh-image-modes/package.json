@@ -1,0 +1,23 @@
+{
+  "name": "dsh-image-modes",
+  "version": "0.1.0",
+  "description": "dsh 插件：把云端、本地、混合三种出图方式整合成一个工具（gen_image 的 mode 参数），并把实测出来的取舍固化进代码",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "package.json",
+    "README.md"
+  ]
+}

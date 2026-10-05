@@ -89,12 +89,49 @@ local-imagegen/
     └── hybrid_patch.py          跨阶段像素级补丁：裁剪 → 重绘 → 原分辨率贴回，内置 --align-from 自动重定位
 ```
 
+## 附带的 DSH 插件：`dsh-image-modes`
+
+本仓库还包含一个把三种出图方式整合成**一个工具**的 DSH 插件，代码在 [`dsh-image-modes/`](dsh-image-modes/)：
+
+```
+gen_image(mode = "cloud" | "local" | "hybrid", prompt, ...)   # 一个入口三种模式
+image_modes_status()                                          # 开工前自检：三种方式各自能不能用
+understand_image(images, prompt)                              # 识图：读图中文字、多图对比、看图验收
+```
+
+- `cloud`：远端 OpenAI 兼容图像 API，最高 4K 档（2K ≈ 3.9MP），**看得懂画面**，但没有蒙版、没有 seed，每次都整幅重绘
+- `local`：本机 ComfyUI + Z-Image Turbo，12–32 秒/张、**零成本**、**seed 可复现**、**像素级蒙版重绘**，上限约 1.03MP
+- `hybrid`：本地先出草稿或打底，再交云端高清重构 —— 实测**唯一**同时保住"完成度 + 参考角色神态"的路线
+
+插件把实测出来的取舍固化进了代码：`mode` 参数**没有默认值**（强制显式选择），工具描述里写明"调用前必须先问用户并说明取舍"，全身立绘提醒用 9:16、本地重绘提醒蒙版要贴合物体，云端带 4 次重试退避，ComfyUI 掉线可自动拉起。
+
+### 安装
+
+**推荐：让 agent 帮你装。** 对 DSH 里的 agent 说一句"把仓库里的 `dsh-image-modes` 装进 profile"，它会复制到 `<profile>/vendor/`、改 `package.json`、跑 `pnpm install`。
+
+**手动安装**：
+
+1. 把 `dsh-image-modes` 整个目录复制到 `<profile>/vendor/dsh-image-modes`
+2. 在 `<profile>/package.json` 里：
+
+```json
+{
+  "dependencies": { "dsh-image-modes": "file:./vendor/dsh-image-modes" },
+  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dsh-image-modes"] } }
+}
+```
+
+3. 在 profile 目录执行 `pnpm install`，然后重载 profile
+
+安装后三个工具会出现在 agent 的工具表里。**云端密钥不需要重复配置**：插件复用 `IMAGE_API_KEY` / `IMAGE_API_BASE` 这套凭据引用。详见 [`dsh-image-modes/README.md`](dsh-image-modes/README.md)。
+
 ## 许可
 
 [MIT](LICENSE)
 
 ## 更新记录
 
+- **1.2.1** —— `ensure_server.ps1` 修两处：ComfyUI 静默崩溃时**不再无据可查**（输出重定向到 `<root>/logs/comfyui.out|err.log`）；脚本改为**纯 ASCII + 参数表**，修掉"中文注释在 GBK 主机上破坏 PowerShell 行尾续行"的语法崩。另在本仓库加入 `dsh-image-modes` 插件。
 - **1.2.0** —— 局部重绘可控化：`inpaint.py` 新增 `--denoise`（`0.5–0.7` 保住轮廓改外观、`0.85–1.0` 去物体填空白）与 `--mask-blur`（喂给模型的软边蒙版，消除接缝环）；新增 `hybrid_patch.py` 负责"云端出高清 → 本地精确修"的裁剪-重绘-贴回，并能自动换算跨阶段的坐标漂移；SKILL.md 补上"蒙版必须贴合目标物体"与"跨阶段必须先配准"两条实测教训。
 - **1.1.0** —— 可移植化：去掉写死的用户路径，改用技能基目录相对路径；补上安装排查（技能加载器必须已启用）与分发必备条件说明。
 - **1.0.0** —— 首版：能力自检、文生图与局部重绘 CLI。

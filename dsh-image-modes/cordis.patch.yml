@@ -1,0 +1,22 @@
+# dsh-image-modes bundle layer: applied when the profile lists this bundle.
+# 用户可在自己 profile 的 cordis.patch.yml 中按 id 覆盖本行（重述整个 config）。
+- insert:
+    - id: dsh-image-modes
+      name: dsh-image-modes
+      config:
+        # ---- 云端（与 dsh-imagegen 共用同一套凭据引用，配一次即可）----
+        apiBase: https://api.agnes-ai.cn
+        apiKeyRef: IMAGE_API_KEY
+        baseUrlRef: IMAGE_API_BASE
+        imageModel: agnes-image-2.1-flash
+        visionModel: agnes-2.5-flash
+        # ---- 本地（ComfyUI）----
+        comfyHost: http://127.0.0.1:8188
+        comfyRoot: D:\dsh\ComfyUI
+        unet: z_image_turbo_int8_convrot.safetensors
+        clip: qwen_3_4b_fp8_mixed.safetensors
+        vae: ae.safetensors
+        # 可选：ComfyUI 未启动时用这个脚本拉起（留空则只报错不自动启动）
+        ensureServerScript: ""
+        # ---- 产出 ----
+        outputDir: generated_images
