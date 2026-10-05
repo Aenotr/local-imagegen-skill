@@ -12,6 +12,11 @@ The mask shape matters a lot: a mask that exposes background forces the model to
 hallucinate that background, which usually produces flat smears and seam rings.
 Keep masks tight to the object being replaced.
 
+--denoise controls how much of the masked area is reinvented: 0.5-0.7 keeps the
+existing silhouette (recolour / material changes), 0.85-1.0 invents content
+(object removal, filling empty areas). --mask-blur softens the mask the model
+sees, which is what removes the hard seam ring a binary mask produces.
+
 Usage:
   python inpaint.py --image out.png --rect 1114,172,1250,268 --prompt-file fix.txt
 """
@@ -33,14 +38,19 @@ for _s in (sys.stdout, sys.stderr):
         _s.reconfigure(encoding='utf-8', errors='replace')
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFilter
 except ImportError:
     Image = None
 
 
-def build_mask(image_path, out_path, rect=None, poly=None, supplied=None):
+def build_mask(image_path, out_path, rect=None, poly=None, supplied=None, blur=0):
     if supplied:
         shutil.copyfile(supplied, out_path)
+        if blur and blur > 0:
+            if Image is None:
+                raise SystemExit('Pillow is required for --mask-blur')
+            Image.open(out_path).convert('L').filter(
+                ImageFilter.GaussianBlur(blur)).save(out_path)
         return
     if Image is None:
         raise SystemExit('Pillow is required to build a mask; pass --mask instead')
@@ -60,6 +70,8 @@ def build_mask(image_path, out_path, rect=None, poly=None, supplied=None):
         d.polygon(pts, fill=255)
     else:
         raise SystemExit('one of --rect / --poly / --mask is required')
+    if blur and blur > 0:
+        mask = mask.filter(ImageFilter.GaussianBlur(blur))
     mask.save(out_path)
 
 
@@ -74,6 +86,11 @@ def main():
     ap.add_argument('--steps', type=int, default=cc.DEFAULT_STEPS)
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--grow', type=int, default=4, help='grow_mask_by (px)')
+    ap.add_argument('--denoise', type=float, default=1.0,
+                    help='repaint strength: 0.5-0.7 keeps the silhouette '
+                         '(recolour / material), 0.85-1.0 invents (removal, fill)')
+    ap.add_argument('--mask-blur', dest='mask_blur', type=int, default=0,
+                    help='blur the mask the model sees (px) -> soft edge, no seam ring')
     ap.add_argument('--timeout', type=int, default=900)
     ap.add_argument('--json', action='store_true', dest='as_json')
     args = ap.parse_args()
@@ -96,10 +113,11 @@ def main():
 
     shutil.copyfile(args.image, os.path.join(cc.INPUT_DIR, base_name))
     build_mask(args.image, os.path.join(cc.INPUT_DIR, mask_name),
-               rect=rect, poly=args.poly, supplied=args.mask)
+               rect=rect, poly=args.poly, supplied=args.mask,
+               blur=args.mask_blur)
 
     wf, seed = cc.build_inpaint(base_name, mask_name, prompt, args.steps,
-                                args.seed, args.grow)
+                                args.seed, args.grow, denoise=args.denoise)
     t0 = time.time()
     status, files = cc.submit(wf, timeout=args.timeout, verbose=not args.as_json)
     elapsed = time.time() - t0

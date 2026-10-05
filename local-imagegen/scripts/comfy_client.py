@@ -129,8 +129,19 @@ def build_t2i(prompt, width, height, steps=DEFAULT_STEPS, seed=None):
 
 
 def build_inpaint(image_name, mask_name, prompt, steps=DEFAULT_STEPS,
-                  seed=None, grow_mask_by=4):
-    """Masked repaint graph. image_name/mask_name must already be in ComfyUI/input."""
+                  seed=None, grow_mask_by=4, denoise=1.0):
+    """Masked repaint graph. image_name/mask_name must already be in ComfyUI/input.
+
+    denoise controls how much of the masked area is reinvented, and it is the single
+    most important knob for local editing:
+
+      0.5-0.7  keeps the existing silhouette and re-renders its appearance
+               (recolour, change material, fix a detail)
+      0.85-1.0 invents content (remove an object, fill empty area)
+
+    Pinning it at 1.0 -- as this skill did originally -- makes every masked edit a
+    full repaint, so a large mask produces an unrelated picture inside the mask.
+    """
     if seed is None:
         seed = random.randint(0, 2 ** 48)
     wf = _base_nodes(prompt, 1024, 1024, steps, seed)
@@ -141,7 +152,7 @@ def build_inpaint(image_name, mask_name, prompt, steps=DEFAULT_STEPS,
                 'inputs': {'pixels': ['7', 0], 'vae': ['4', 0], 'mask': ['11', 0],
                            'grow_mask_by': grow_mask_by}}
     wf['8']['inputs']['latent_image'] = ['12', 0]
-    wf['8']['inputs']['denoise'] = 1.0
+    wf['8']['inputs']['denoise'] = float(denoise)
     wf['10']['inputs']['filename_prefix'] = 'local_imagegen_inpaint'
     return wf, seed
 

@@ -85,12 +85,19 @@ local-imagegen/
     ├── ensure_server.ps1        探测/拉起 ComfyUI 服务
     ├── comfy_client.py          ComfyUI 客户端 + 工作流构建
     ├── generate.py              文生图 CLI
-    └── inpaint.py               局部重绘 CLI
+    ├── inpaint.py               局部重绘 CLI（--denoise / --mask-blur 可控强度与软边）
+    └── hybrid_patch.py          跨阶段像素级补丁：裁剪 → 重绘 → 原分辨率贴回，内置 --align-from 自动重定位
 ```
 
 ## 许可
 
 [MIT](LICENSE)
+
+## 更新记录
+
+- **1.2.0** —— 局部重绘可控化：`inpaint.py` 新增 `--denoise`（`0.5–0.7` 保住轮廓改外观、`0.85–1.0` 去物体填空白）与 `--mask-blur`（喂给模型的软边蒙版，消除接缝环）；新增 `hybrid_patch.py` 负责"云端出高清 → 本地精确修"的裁剪-重绘-贴回，并能自动换算跨阶段的坐标漂移；SKILL.md 补上"蒙版必须贴合目标物体"与"跨阶段必须先配准"两条实测教训。
+- **1.1.0** —— 可移植化：去掉写死的用户路径，改用技能基目录相对路径；补上安装排查（技能加载器必须已启用）与分发必备条件说明。
+- **1.0.0** —— 首版：能力自检、文生图与局部重绘 CLI。
 
 ## 致谢
 
